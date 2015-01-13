@@ -51,9 +51,10 @@ public class MessageCountStatisticCollector extends AbstractStatisticCollector<M
 
                 case BY_RUNVAR:
                     String runVar = r.getRunningVarName();
-                    bv = new BarVisualModel("Message Count", runVar, "Avg(Message Sent)");  
+                    double repeat_count = r.getRepeatCount();               //fix the bug when repeat count is larger than 1, the message number will grow as the repeat count grows
+                    bv = new BarVisualModel("Message Count", runVar, "Sum(Message Sent)");  
                     res = db.query(""
-                            + "select ALGORITHM_INSTANCE, avg(messages) as m, runvar "     
+                            + "select ALGORITHM_INSTANCE, sum(messages)/" + repeat_count+"as m, runvar "     
                             + "from Message_count "
                             + "where test = '" + r.getName() + "' "
                             + "group by ALGORITHM_INSTANCE, runvar "
