@@ -24,14 +24,14 @@ import java.util.logging.Logger;
  */
 public class AsyncAgentRunner implements AgentRunner, IdleDetector.Listener {
 
-    private Agent currentExecutedAgent;
-    private LinkedList<Agent> nestedAgents;
-    private LinkedList<ContinuationMediator> nestedAgentsCalculationMediators;
-    private Thread cthread;
-    private AbstractExecution exec;
-    private Semaphore idleDetectionLock = new Semaphore(1);
-    private IdleDetector currentIdleDetector = null;
-    private Limiter limiter = null;
+    protected Agent currentExecutedAgent;
+    protected LinkedList<Agent> nestedAgents;
+    protected LinkedList<ContinuationMediator> nestedAgentsCalculationMediators;
+    protected Thread cthread;
+    protected AbstractExecution exec;
+    protected Semaphore idleDetectionLock = new Semaphore(1);
+    protected IdleDetector currentIdleDetector = null;
+    protected Limiter limiter = null;
     /**
      * used for the join method -> using a semaphore means that we are only
      * allowing 1 joining thread, this is the case currently but if we will want
@@ -39,9 +39,10 @@ public class AsyncAgentRunner implements AgentRunner, IdleDetector.Listener {
      *
      * TODO - replace with roadblock - move to abstract agent runner
      */
-    private Semaphore joinBlock = new Semaphore(1);
+    protected Semaphore joinBlock = new Semaphore(1);
 
     public AsyncAgentRunner(Agent a, AbstractExecution exec) {
+    	
         this.exec = exec;
         this.currentExecutedAgent = a;
 
@@ -136,7 +137,7 @@ public class AsyncAgentRunner implements AgentRunner, IdleDetector.Listener {
         }
     }
 
-    private void awaitNextMessage() throws InterruptedException {
+    protected void awaitNextMessage() throws InterruptedException {
         if (exec.isForceIdleDetection() || currentExecutedAgent.isUsingIdleDetection()) {
             if (!currentExecutedAgent.hasPendingMessages()) {
                 currentIdleDetector.notifyAgentIdle();
@@ -175,8 +176,12 @@ public class AsyncAgentRunner implements AgentRunner, IdleDetector.Listener {
         }
 
         if (currentExecutedAgent.isUsingIdleDetection()) {
-            System.out.println("Idle Detected - " + currentExecutedAgent + " Being Notified.");
-
+//            System.out.println("Idle Detected - " + currentExecutedAgent + " Being Notified.");
+        	/**
+        	 * Olivia added
+        	 * Forward time when idle is detected
+        	 */
+        	exec.getMailer().forwardTime();
             currentExecutedAgent.onIdleDetected();
         }
 
@@ -196,7 +201,7 @@ public class AsyncAgentRunner implements AgentRunner, IdleDetector.Listener {
         currentExecutedAgent.start();
     }
 
-    private void updateCurrentIdleDetector() {
+    protected void updateCurrentIdleDetector() {
         if (exec.isForceIdleDetection() || currentExecutedAgent.isUsingIdleDetection()) {
             currentIdleDetector = currentIdleDetector.getSubDetector(Agent.PlatformOperationsExtractor.extract(currentExecutedAgent).getMailGroupKey());
         }
@@ -215,7 +220,7 @@ public class AsyncAgentRunner implements AgentRunner, IdleDetector.Listener {
     }
 
     //TODO: FIGURE OUT HOW TO REMOVE THIS CODE!
-    private void registerIdleDetectionCallback(Agent a) {
+    protected void registerIdleDetectionCallback(Agent a) {
         if (a.isUsingIdleDetection()) {
             a.hookIn(new BeforeMessageProcessingHook() {
                 @Override

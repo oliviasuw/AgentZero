@@ -34,7 +34,7 @@ public class AsyncTest extends AbstractTest {
     @Override
     protected Execution provideExecution(Problem p, AlgorithmMetadata alg) {
         if (dman != null) {
-            final AsyncDelayedMailer mailer = new AsyncDelayedMailer(dman, p.getNumberOfVariables());
+            final AsyncDelayedMailer mailer = new AsyncDelayedMailer(dman, p.getNumberOfAgents());
             AsyncExecution ret = new AsyncExecution(p, alg, this, mailer, getExperiment());
 //                        ret.setIdleDetector(idle.getSubDetector(ret.getAlgorithm().getAgentClass().getName()));
 //            ret.setForceIdleDetection(true);

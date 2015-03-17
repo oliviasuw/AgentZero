@@ -18,8 +18,11 @@ import bgu.dcr.az.api.tools.Assignment;
 import bgu.dcr.az.api.tools.IdleDetector;
 import bgu.dcr.az.api.exen.escan.AlgorithmMetadata;
 import bgu.dcr.az.exen.async.AsyncExecution;
+
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -39,6 +42,11 @@ import java.util.logging.Logger;
  * @author bennyl
  */
 public abstract class AbstractExecution extends AbstractProcess implements Execution {
+	
+	/**
+	 * debug
+	 */
+	boolean debug = true;
 
     private Experiment experiment; //the executing experiment
     private Problem problem;//the *global* problem
@@ -46,7 +54,7 @@ public abstract class AbstractExecution extends AbstractProcess implements Execu
     private boolean shuttingdown; //this variable is used to check that the execution is doing the process of shuting down only once.
     private ExecutionResult result = new ExecutionResult(this); //the final execution result
     private AlgorithmMetadata algorithmMetadata; //the executed algorithm metadata
-    private IdleDetector idleDetector; //if this execution need an idle detector then this field will hold it
+    protected IdleDetector idleDetector; //if this execution need an idle detector then this field will hold it
     private ExecutorService executorService; // this is the thread pool that this execution use
     private AgentRunner[] agentRunners; //the agent runners of this execution
     private Agent[] agents; //the constracted agents
@@ -65,6 +73,7 @@ public abstract class AbstractExecution extends AbstractProcess implements Execu
      */
     public AbstractExecution(Problem p, Mailer m, AlgorithmMetadata a, Test test, Experiment exp) {
         this.shuttingdown = false;
+        System.out.println("exp:" + exp);
         this.executorService = exp.getThreadPool();
         this.mailer = m;
         this.problem = p;
@@ -166,13 +175,20 @@ public abstract class AbstractExecution extends AbstractProcess implements Execu
 
     protected boolean tryGenerateAgents() {
         try {
-            agents = new Agent[getGlobalProblem().getNumberOfVariables()];
+            agents = new Agent[getGlobalProblem().getNumberOfAgents()];
             for (int i = 0; i < agents.length; i++) {
                 getAgents()[i] = getAlgorithm().generateAgent();
                 PlatformOps apops = Agent.PlatformOperationsExtractor.extract(getAgents()[i]);
                 apops.setExecution(this);
                 apops.setId(i);
 
+                /**
+                 * Olivia added 
+                 */
+                List<Integer> myVarIds = new ArrayList();
+                myVarIds = getGlobalProblem().getVariables(i);
+                apops.setMyVarsId(myVarIds);
+                apops.setMyRealAgent(getGlobalProblem().getMyRealAgentId(i));
             }
             return true;
         } catch (InstantiationException ex) {
@@ -208,6 +224,15 @@ public abstract class AbstractExecution extends AbstractProcess implements Execu
         result.toSucceefulState(answer);
     }
 
+    @Override
+    public void reportFinalCost(int cost){
+        result.toSuccessfulState(cost);
+    }
+
+    public void reportFinalCost(int cost, double currentWeight){
+        getResult().toSuccessfulState(cost, currentWeight);
+    }
+    
     public IdleDetector getIdleDetector() {
         return idleDetector;
     }
@@ -252,6 +277,9 @@ public abstract class AbstractExecution extends AbstractProcess implements Execu
 
     @Override
     public ExecutionResult getResult() {
+    	if(debug) {
+    		System.out.println("getResult");
+    	}
         return result;
     }
 
@@ -288,15 +316,22 @@ public abstract class AbstractExecution extends AbstractProcess implements Execu
             initialize();
             startExecution();
         } finally {
+        	
             finish();
+            
+            
             try {
+
                 for (TerminationHook hook : terminationHooks) {
                     hook.hook();
                 }
+
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
+
             log(-1, "SYSTEM", "Execution Ended With Result = " + getResult());
+
             System.out.println("Execution Ended.");
         }
     }
@@ -364,7 +399,7 @@ public abstract class AbstractExecution extends AbstractProcess implements Execu
 
         //setup idle detector
         if (this.idleDetector == null) {
-            this.idleDetector = new IdleDetector(getGlobalProblem().getNumberOfVariables(), getMailer(), getAlgorithm().getAgentClass().getName());
+            this.idleDetector = new IdleDetector(getGlobalProblem().getNumberOfAgents(), getMailer(), getAlgorithm().getAgentClass().getName());
         }
 
         // do any other configuration that maight be implemented on the deriving classes

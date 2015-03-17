@@ -21,8 +21,12 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  *
  * @author bennyl
+ * Message queue when adding Message delayer [if not added, bgu.dcr.az.exen.async.AsyncMailer is instantiate]
  */
 public class DelayedMessageQueue implements MessageQueue {
+	
+	/* debug */
+	boolean debug = false;
 
     private PriorityBlockingQueue<Message> futureQ;
     private PriorityBlockingQueue<Message> q;
@@ -48,6 +52,9 @@ public class DelayedMessageQueue implements MessageQueue {
 
     @Override
     public void onAgentFinish() {
+    	if(debug){
+    		System.out.println("onAgentFinish");
+    	}
         agentFinished = true;
         parent.updateAgentActiveGroup(agent, groupKey);
         timeSwitchDetector.notifyAgentIdle();
@@ -92,18 +99,39 @@ public class DelayedMessageQueue implements MessageQueue {
     /**
      * will try to add the message if the time is right else will put it in the
      * internal q
-     *
+     * 
      * @param e
      * @param time
+     * Modified by Olivia
+     * Do not delay the system msgs: SYS_TERMINATION_MESSAGE
      */
     public void tryAdd(Message e, long time) {
-        long mtime = dman.extractTime(e);
 
-        if (mtime <= time) {
-            add(e);
-        } else {
-            futureQ.offer(e);
+        String msgName = e.getName();
+        if(!msgName.equals("__TERMINATE__") &&
+        		!msgName.equals("__TICK__") &&
+        		!msgName.equals("__TIMEOUT__") &&
+        		!msgName.equals("DONE") &&
+        		!msgName.equals("SET_CHILD") &&
+        		!msgName.equals("ADD_ANCESTORS") &&
+        		!msgName.equals("SET_PSAUDO_CHILD") &&
+        		!msgName.equals("REFUSE_VISIT") 
+        		){
+        	long mtime = dman.extractTime(e);
+            if (mtime <= time) {
+                add(e);
+            } else {
+                futureQ.offer(e);
+            }
+
         }
+        else{
+        	if(debug){
+        		System.out.println("ADD MSG: " + msgName + "from agent " + e.getSender());
+        	}
+        	add(e);
+        }
+
     }
 
     @Override
@@ -114,6 +142,14 @@ public class DelayedMessageQueue implements MessageQueue {
         }
 
         count.release();
+    }
+    
+    /**
+     * @author Olivia
+     * @return
+     */
+    public PriorityBlockingQueue<Message> getDelayedQueue(){
+    	return futureQ;
     }
 
     @Override
@@ -144,6 +180,13 @@ public class DelayedMessageQueue implements MessageQueue {
         return !this.q.isEmpty();
     }
 
+    /**
+     * @author Olivia
+     */
+    @Override
+    public boolean delayedQueueIsEmpty() {
+        return this.futureQ.isEmpty();
+    }
     /**
      * @return from all the messages in the innerq the minimum message time - or
      * null if the innerq is empty.

@@ -45,6 +45,9 @@ import java.util.logging.Logger;
  * @author bennyl
  */
 public abstract class AbstractTest extends AbstractProcess implements Test, ExternalConfigurationAware {
+	
+	/* debug */
+	boolean debug = true;
 
     public static final String PROBLEM_GENERATOR_PROBLEM_METADATA = "PROBLEM GENERATOR";
     public static final String SEED_PROBLEM_METADATA = "SEED";
@@ -335,6 +338,11 @@ public abstract class AbstractTest extends AbstractProcess implements Test, Exte
                     }
                 }
             }
+            //debug
+            if(debug){
+            	System.out.println("~~~~~~~~~~~~~~~~~~here~~~~~~~~~~~~~~~~~~~");
+            }
+            
             res = new TestResult();
 
         } catch (Exception ex) {

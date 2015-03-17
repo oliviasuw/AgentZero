@@ -16,7 +16,7 @@ import bgu.dcr.az.exen.stat.db.DatabaseUnit;
  */
 public abstract class AbstractStatisticCollector<T extends DBRecord> extends Agt0DSL implements StatisticCollector<T> {
 
-    protected Test test;            //change default access modifier to protected
+    Test test;
 
     public void setTest(Test test) {
         this.test = test;

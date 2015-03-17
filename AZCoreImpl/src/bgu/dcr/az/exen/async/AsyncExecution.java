@@ -28,12 +28,12 @@ public class AsyncExecution extends AbstractExecution {
 
     @Override
     protected void configure() {
-        final int numberOfVariables = getGlobalProblem().getNumberOfVariables();
+        final int numberOfAgents = getGlobalProblem().getNumberOfAgents();
 
         /**
          * THIS EXECUTION MOD USES 1 AGENT RUNNER FOR EACH AGENT
          */
-        setAgentRunners(new AgentRunner[numberOfVariables]);
+        setAgentRunners(new AgentRunner[numberOfAgents]);
 
         if (!tryGenerateAgents()) {
             return; //generate agents failed

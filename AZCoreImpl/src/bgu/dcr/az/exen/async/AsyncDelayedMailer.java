@@ -23,6 +23,9 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class AsyncDelayedMailer extends AbstractMailer implements IdleDetector.Listener {
 
+	/*debug*/
+	boolean debug = false;
+	
     MessageDelayer dman;
     AtomicLong time;
     IdleDetector timeForwardDetector;
@@ -62,6 +65,7 @@ public class AsyncDelayedMailer extends AbstractMailer implements IdleDetector.L
 
     @Override
     public void send(Message msg, int to, String groupKey) {
+    	
         for (Hooks.BeforeMessageSentHook h : beforeMessageSentHooks) {
             h.hook(msg.getSender(), to, msg);
         }
@@ -98,7 +102,11 @@ public class AsyncDelayedMailer extends AbstractMailer implements IdleDetector.L
      * @return true if idle was resolved
      */
     public boolean forwardTime() {
-
+    	if(debug){
+    		System.out.println("CurrentTime: " + time.get());
+    	}
+    	
+    	
         boolean found = false;
         long min = -1;
         try {
@@ -220,5 +228,15 @@ public class AsyncDelayedMailer extends AbstractMailer implements IdleDetector.L
         public void hookIn(BeforeMessageSentHook hook) {
             throw new UnsupportedOperationException("Not supported.");
         }
+
+		/* (non-Javadoc)
+		 * @author Olivia
+		 * @see bgu.dcr.az.api.exen.NonBlockingMailer#forwardTime()
+		 */
+		@Override
+		public boolean forwardTime() {
+			// TODO Auto-generated method stub
+			return false;
+		}
     }
 }
