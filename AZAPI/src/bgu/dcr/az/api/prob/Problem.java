@@ -4,6 +4,8 @@ import bgu.dcr.az.api.prob.cpack.ConstraintsPackage;
 import bgu.dcr.az.api.Agt0DSL;
 import bgu.dcr.az.api.ds.ImmutableSet;
 import bgu.dcr.az.api.tools.Assignment;
+
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -18,13 +20,34 @@ import java.util.Set;
  */
 public class Problem implements ImmutableProblem {
 
-    private HashMap<String, Object> metadata = new HashMap<>();
+    public ArrayList<Integer> getConstrainedVars(int src, int dest) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+	
+	/**
+	 * 
+	 * @author Olivia
+	 *
+	 */
+    public static enum ModelType {
+        single,  // one variable per agent, default one
+        multiple_VA,  // multi variables per agent, virtual agent approach
+        multiple_OC,  // multi variables per agent, online compilation approach
+    }
+    public ModelType modelType = ModelType.single; //default
+    //For algorithm running, for multiple_VA, each agent has only one variable
+    protected HashMap<Integer, ArrayList<Integer>> agentVarMap = new HashMap(); 
+    //For multiple_VA, this is the map between real agent and variable
+    protected HashMap<Integer, ArrayList<Integer>> realAgentVarMap = new HashMap(); 
+    
+    
+    private HashMap<String, Object> metadata = new HashMap<>();  
     protected int numvars;
     protected ImmutableSetOfIntegers[] domain;
     protected ConstraintsPackage constraints;
     protected ProblemType type;
     protected int maxCost = 0;
-    protected boolean singleDomain = true;
+    protected boolean singleDomain = true;  
 
     @Override
     public String toString() {
@@ -35,9 +58,8 @@ public class Problem implements ImmutableProblem {
      * @param var1
      * @param var2
      * @return true if there is a constraint between var1 and var2 operation
-     *         cost: o(d^2)cc
+     * cost: o(d^2)cc
      */
-    @Override
     public boolean isConstrained(int var1, int var2) {
         return getNeighbors(var1).contains(var2);
     }
@@ -49,7 +71,6 @@ public class Problem implements ImmutableProblem {
      * @param val2
      * @return true if var1=val1 consistent with var2=val2
      */
-    @Override
     public boolean isConsistent(int var1, int val1, int var2, int val2) {
         return getConstraintCost(var1, val1, var2, val2) == 0;
     }
@@ -60,15 +81,24 @@ public class Problem implements ImmutableProblem {
      * @param var
      * @return
      */
-    @Override
     public int getDomainSize(int var) {
         return getDomainOf(var).size();
     }
 
     /**
+     * Get the variable Ids that belongs to given agentId
+     */
+    public List<Integer> getVariables(int agentId) {
+        return agentVarMap.get(agentId);
+    }
+
+    public int getNumberOfAgents() {
+        return agentVarMap.size();
+    }
+    
+    /**
      * @return this problem metadata
      */
-    @Override
     public HashMap<String, Object> getMetadata() {
         return metadata;
     }
@@ -77,11 +107,9 @@ public class Problem implements ImmutableProblem {
      * @param var
      * @return all the variables that costrainted with the given var
      */
-    @Override
     public Set<Integer> getNeighbors(int var) {
         return constraints.getNeighbores(var);
     }
-
 
     public ImmutableSet<Integer> getDomain() {
         if (!singleDomain) {
@@ -90,17 +118,43 @@ public class Problem implements ImmutableProblem {
         return domain[0];
     }
 
-    @Override
     public int getNumberOfVariables() {
         return numvars;
     }
+    
+    /**
+     * model type: single
+     * @param size
+     */
+    protected void createAgentVarMapOfVariblesSize(int size) {
+        for (int i = 0; i < size; i++) {
+            ArrayList<Integer> temp = new ArrayList<>();
+            temp.add(i);
+            agentVarMap.put(i, temp);
+            realAgentVarMap.put(i, temp);
+        }     
+    }
 
+    /**
+     * model type: single
+     * @param type
+     * @param domain
+     * @param singleDomain
+     */
     protected void initialize(ProblemType type, List<? extends Set<Integer>> domain, boolean singleDomain) {
         this.singleDomain = singleDomain;
         this.domain = ImmutableSetOfIntegers.arrayOf(domain);
         this.numvars = domain.size();
         this.type = type;
-        this.constraints = type.newConstraintPackage(numvars, domain.get(0).size());
+        // Olivia added
+        createAgentVarMapOfVariblesSize(numvars);
+        int maxDomainSize = 0;
+        for(ImmutableSetOfIntegers dom : this.domain){
+        	if(maxDomainSize < dom.size()){
+        		maxDomainSize = dom.size();
+        	}
+        }
+        this.constraints = type.newConstraintPackage(numvars, maxDomainSize);
     }
 
     /**
@@ -137,11 +191,27 @@ public class Problem implements ImmutableProblem {
     public void initialize(ProblemType type, int numberOfVariables, int domainSize) {
         initialize(type, numberOfVariables, new HashSet<Integer>(Agt0DSL.range(0, domainSize - 1)));
     }
+    
+    /**
+     * @author Olivia
+     * @param type
+     * @param numberOfVariables
+     * @param domainSize
+     * @param model
+     * @param runningAgentVarMap
+     * @param trueAgentVarMap
+     */
+    public void initialize(ProblemType type, int numberOfVariables, List<? extends Set<Integer>> domain,
+    		ModelType model, HashMap runningAgentVarMap, HashMap trueAgentVarMap) {
+    	modelType = model;
+        initialize(type, domain);
+    	agentVarMap = runningAgentVarMap;
+    	realAgentVarMap = trueAgentVarMap;
+    }
 
     /**
      * @return the type of the problem
      */
-    @Override
     public ProblemType type() {
         return type;
     }
@@ -149,17 +219,14 @@ public class Problem implements ImmutableProblem {
     /**
      * return the domain that belongs to variable var
      */
-    @Override
     public ImmutableSet<Integer> getDomainOf(int var) {
         return domain[var];
     }
 
-    @Override
     public int getConstraintCost(Assignment ass) {
         throw new UnsupportedOperationException("Not supported without providing owner. Please use getConstraintCost(int owner, Assignment ass)");
     }
 
-    @Override
     public int calculateCost(Assignment a) {
         throw new UnsupportedOperationException("Not supported when not accessed from inside of an agent code - please use getGlobalCost");
     }
@@ -277,14 +344,12 @@ public class Problem implements ImmutableProblem {
         return result.getCost();
     }
 
-    @Override
     public int getConstraintCost(int x1, int v1) {
         ConstraintCheckResult result = new ConstraintCheckResult();
         constraints.getConstraintCost(x1, x1, v1, result);
         return result.getCost();
     }
 
-    @Override
     public int getConstraintCost(int x1, int v1, int x2, int v2) {
         ConstraintCheckResult result = new ConstraintCheckResult();
         constraints.getConstraintCost(x1, x1, v1, x2, v2, result);
@@ -322,4 +387,22 @@ public class Problem implements ImmutableProblem {
     public int calculateGlobalCost(Assignment a) {
         return constraints.calculateGlobalCost(a);
     }
+    
+    /**
+     * 
+     * @param varId
+     * @return the agentID that contains the given variable
+     *         if not found, return -1
+     */
+    public int getMyRealAgentId(int varId){
+    	for(int agent: realAgentVarMap.keySet()){
+    		for(int myVarID : realAgentVarMap.get(agent)){
+    			if(myVarID == varId) {
+    				return agent;
+    			}
+    		}
+    	}
+    	return -1;
+    }
+
 }

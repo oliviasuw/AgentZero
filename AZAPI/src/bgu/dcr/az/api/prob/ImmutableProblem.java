@@ -6,7 +6,10 @@ package bgu.dcr.az.api.prob;
 
 import bgu.dcr.az.api.ds.ImmutableSet;
 import bgu.dcr.az.api.tools.Assignment;
+
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -36,9 +39,10 @@ public interface ImmutableProblem {
      * @param val1
      * @return the cost of assigning var1=val1
      */
-    default int getConstraintCost(int var1, int val1) {
-        return getConstraintCost(var1, val1, var1, val1);
-    }
+//    default int getConstraintCost(int var1, int val1) {
+//        return getConstraintCost(var1, val1, var1, val1);
+//    }
+    int getConstraintCost(int var1, int val1);
 
     /**
      * return the cost of the k-ary constraint represented by the given
@@ -80,6 +84,14 @@ public interface ImmutableProblem {
      * @return the number of variables defined in this problem
      */
     int getNumberOfVariables();
+    
+    int getNumberOfAgents();
+    
+    List<Integer> getVariables(int agentId);
+ 
+    // Deleted by Olivia
+//    public ArrayList<Integer> getConstrainedVars(int src, int dest);
+
 
     /**
      * @param var1
@@ -88,9 +100,10 @@ public interface ImmutableProblem {
      * @param val2
      * @return true if var1=val1 consistent with var2=val2
      */
-    default boolean isConsistent(int var1, int val1, int var2, int val2) {
-        return getConstraintCost(var1, val1, var2, val2) == 0;
-    }
+//    default boolean isConsistent(int var1, int val1, int var2, int val2) {
+//        return getConstraintCost(var1, val1, var2, val2) == 0;
+//    }
+    boolean isConsistent(int var1, int val1, int var2, int val2);
 
     /**
      * @param var1
@@ -108,5 +121,12 @@ public interface ImmutableProblem {
      * @return
      */
     int calculateCost(Assignment a);
+
+	/**
+	 * @param src
+	 * @param dest
+	 * @return
+	 */
+	ArrayList<Integer> getConstrainedVars(int src, int dest);
 
 }

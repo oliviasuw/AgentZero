@@ -13,8 +13,10 @@ import bgu.dcr.az.api.prob.KAryConstraint;
 import bgu.dcr.az.api.prob.ProblemType;
 import bgu.dcr.az.api.prob.cpack.KAryTreeConstraintPackage;
 import bgu.dcr.az.api.tools.Assignment;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -99,7 +101,7 @@ public class PatchableAgentProblem implements PossibleProblem {
             throw new UnsupportedOperationException("variable " + variable + " already exists");
         }
 
-        domains.put(variable, new HashSet<>());
+        domains.put(variable, new HashSet());
     }
 
     public boolean containsVariable(int variable) {
@@ -121,6 +123,31 @@ public class PatchableAgentProblem implements PossibleProblem {
 
     public void setProbability(double probability) {
         this.probability = probability;
+    }
+
+    @Override
+    public int getNumberOfAgents() {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public List<Integer> getVariables(int agentId) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public ArrayList<Integer> getConstrainedVars(int src, int dest) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public int getConstraintCost(int var1, int val1) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public boolean isConsistent(int var1, int val1, int var2, int val2) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
 }

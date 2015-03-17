@@ -81,6 +81,10 @@ public interface Execution extends Process {
 
     void reportFinalAssignment(Assignment answer);
     
+    void  reportFinalCost(int cost);
+
+    void  reportFinalCost(int cost, double currentWeight);   //currentWeight equals to UB/LB
+    
     /**
      * will stop the execution - interupting all the agent runners!
      */

@@ -48,7 +48,7 @@ public enum Registery {
         Reflections ref;
         Set<Class<?>> types;
 
-        ref = new Reflections(new ConfigurationBuilder().addUrls(ClasspathHelper.forPackage("bgu.dcr.az"), ClasspathHelper.forPackage("ext.sim")).setScanners(new TypeAnnotationsScanner()));
+        ref = new Reflections(new ConfigurationBuilder().addUrls(ClasspathHelper.forPackage("bgu.dcr.az")).setScanners(new TypeAnnotationsScanner()));
 
         //SCANNING XML ENTITIES
         System.out.println("Scanning XML Entities");

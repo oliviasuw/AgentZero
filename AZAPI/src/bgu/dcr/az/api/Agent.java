@@ -38,6 +38,9 @@ import java.util.logging.Logger;
  *
  */
 public abstract class Agent extends Agt0DSL {
+	
+	/* debug */
+	boolean debug = true;
 
     /**
      * the name for the system termination message the system termination
@@ -53,11 +56,17 @@ public abstract class Agent extends Agt0DSL {
     public static final String SYS_TICK_MESSAGE = "__TICK__";
     public static final String SYS_TIMEOUT_MESSAGE = "__TIMEOUT__";
     private int id; //The Agent ID
+    
+    // Olivia Added
+    private List<Integer> myVars;  // The IDs of variables belong to me
+    private int realAgentID;  // In case of multi-vars per agent, using Virtual Agent apporach
+    						  // The running agent is actually a variable, while realAgentID is the agentID this virtual agent belongs to
+    
     private MessageQueue mailbox; //This Agent Mailbox
     private ImmutableProblem prob; // The Agent Local Problem
     private boolean finished = false; //The Status of the current Agent - TODO: TRANSFORM INTO A STATUS ENUM SO WE CAN BE ABLE TO QUERY THE AGENT ABOUT IT CURRENT STATUS
     private Message currentMessage = null; //The Current Message (The Last Message That was taken from the mailbox)
-    private PlatformOps pops; //Hidden Platform Operation 
+    protected PlatformOps pops; //Hidden Platform Operation
     /**
      * collection of hooks that will get called before message processing on
      * this agent
@@ -82,12 +91,21 @@ public abstract class Agent extends Agt0DSL {
         return prefix + "@" + getAlgorithmName();
     }
 
+    // Added by Chris  Commented by Olivia
+//    public void clearMailBox(){
+//        pops.clearQueue();
+//    }
+
     /**
      * create a default agent - this agent will have id = -1 so you must
      * reassign it
      */
     public Agent() {
         this.id = -1;
+        
+        //Olivia added
+        this.myVars = new ArrayList();
+        
         beforeMessageProcessingHooks = new ArrayList<>();
         afterMessageProcessingHooks = new ArrayList<>();
         beforeCallingFinishHooks = new ArrayList<>();
@@ -218,14 +236,14 @@ public abstract class Agent extends Agt0DSL {
      * building tools that have to be sent with the mailer to other agents don't
      * include the agent's problem in them as a field.
      */
-    protected ImmutableProblem getProblem() {
+    public ImmutableProblem getProblem() {
         return prob;
     }
 
     /**
      * @return set of variables that are constrainted with this agent variable
      */
-    protected Set<Integer> getNeighbors() {
+    public Set<Integer> getNeighbors() {
         return prob.getNeighbors(getId());
     }
 
@@ -236,6 +254,18 @@ public abstract class Agent extends Agt0DSL {
      */
     public int getId() {
         return id;
+    }
+    
+    /**
+     * 
+     * @return the id of variables that belongs to me
+     */
+    public List<Integer> getMyVars() {
+    	return myVars;
+    }
+    
+    public int getRealAgent(){
+    	return realAgentID;
     }
 
     /**
@@ -291,6 +321,25 @@ public abstract class Agent extends Agt0DSL {
     }
 
     /**
+     * @author Olivia
+     *
+     */
+    public boolean hasMessages(){
+    	if(mailbox.availableMessages() > 0 || !mailbox.delayedQueueIsEmpty()){
+    		return true;
+    	}
+    	return false;
+    }
+    
+    /**
+     * @author Olivia
+     * @return
+     */
+    public MessageQueue getMailbox(){
+    	return this.mailbox;
+    }
+    
+    /**
      * @return the next message from the mailbox - waiting if necessary for a
      * new message to arrive
      * @throws InterruptedException
@@ -337,6 +386,11 @@ public abstract class Agent extends Agt0DSL {
         pops.exec.reportFinalAssignment(ans);
         terminate();
     }
+    
+    protected void finishWithCost(int cost){
+        pops.exec.reportFinalCost(cost);
+        terminate();
+    }
 
     /**
      * stop the execution (send TERMINATION to all agents) without solution -
@@ -365,6 +419,11 @@ public abstract class Agent extends Agt0DSL {
      * here so that you can implement your own shutdown mechanism
      */
     protected void finish() {
+    	
+    	if(debug){
+    		System.out.println("Finishing in Agent " + getId());
+    	}
+    	
         if (!finished) {
             hookBeforeCallingFinish();
             finished = true;
@@ -423,6 +482,8 @@ public abstract class Agent extends Agt0DSL {
      * this function called once on each agent when the algorithm is started
      */
     public abstract void start();
+
+    public void start(double weight, double ub){}
 
     /**
      * @return true if this is the first agent current implementation only
@@ -485,7 +546,7 @@ public abstract class Agent extends Agt0DSL {
      * @param var
      * @return the domain of some variable in the current problem
      */
-    protected ImmutableSet<Integer> getDomainOf(int var) {
+    public ImmutableSet<Integer> getDomainOf(int var) {
         return getProblem().getDomainOf(var);
     }
 
@@ -503,7 +564,7 @@ public abstract class Agent extends Agt0DSL {
      *
      * @return
      */
-    protected int getDomainSize() {
+    public int getDomainSize() {
         return getDomainOf(getId()).size();
     }
 
@@ -523,6 +584,10 @@ public abstract class Agent extends Agt0DSL {
      */
     public boolean isFinished() {
         return finished;
+    }
+
+    public void setFinished(boolean finished){
+        this.finished = finished;
     }
 
     /**
@@ -607,6 +672,9 @@ public abstract class Agent extends Agt0DSL {
      */
     @WhenReceived(Agent.SYS_TERMINATION_MESSAGE)
     public void handleTermination() {
+    	if(debug){
+    		System.out.println("handleTermination in agent " + getId());
+    	}
         finish();
     }
 
@@ -642,7 +710,10 @@ public abstract class Agent extends Agt0DSL {
     /**
      * send termination to all agents
      */
-    private void terminate() {
+    private void terminate() {   	
+    	if(debug){
+    		System.out.println("send SYS_TERMINATION in agent " + getId());
+    	}
         send(SYS_TERMINATION_MESSAGE).toAll(range(0, getNumberOfVariables() - 1));
     }
 
@@ -676,7 +747,7 @@ public abstract class Agent extends Agt0DSL {
         private int numberOfSetIdCalls = 0;
         private Map metadata = new HashMap();
         private String mailGroupKey = Agent.this.getClass().getName(); // The Mail Group Key  - when sending mail it will be recieved only by the relevant group
-        private Execution exec; //The Execution That This Agent Is Currently Running Within
+        public Execution exec; //The Execution That This Agent Is Currently Running Within
 
         /**
          * @return all the messages names that the algorithm that is represented
@@ -768,6 +839,24 @@ public abstract class Agent extends Agt0DSL {
             Agent.this.id = id;
             mailbox = getExecution().getMailer().register(Agent.this, mailGroupKey);
         }
+        
+        /**
+         * @author Olivia
+         * set the variables' Id that belong to me
+         * @param myVarIds
+         */
+        public void setMyVarsId(List<Integer> myVarIds){
+        	Agent.this.myVars = myVarIds;
+        }
+        
+        /**
+         * This is the running agent, it could be virtual agent
+         * set the real ower agent that owns this (virtual) running agent
+         * @param owerAgent
+         */
+        public void setMyRealAgent(int owerAgent){
+        	Agent.this.realAgentID = owerAgent;
+        }
 
         /**
          * @return the Execution object - this is the object that connects the
@@ -825,6 +914,11 @@ public abstract class Agent extends Agt0DSL {
 
         public ConstraintCheckResult getQueryTemp() {
             return queryTemp;
+        }
+        
+        @Override
+        public ArrayList<Integer> getConstrainedVars(int src, int dest) {
+            return pops.exec.getGlobalProblem().getConstrainedVars(src, dest);
         }
 
         @Override
@@ -912,6 +1006,16 @@ public abstract class Agent extends Agt0DSL {
 
         public void increaseCC(int amount) {
             cc += amount;
+        }
+
+        @Override
+        public int getNumberOfAgents() {
+            return pops.exec.getGlobalProblem().getNumberOfAgents(); //To change body of generated methods, choose Tools | Templates.
+        }
+
+        @Override
+        public List<Integer> getVariables(int agentId) {
+            return pops.exec.getGlobalProblem().getVariables(agentId); //To change body of generated methods, choose Tools | Templates.
         }
     }
 }
